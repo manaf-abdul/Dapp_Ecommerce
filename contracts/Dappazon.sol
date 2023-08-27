@@ -3,15 +3,14 @@ pragma solidity ^0.8.9;
 
 contract Dappazon {
     address public owner;
-
     struct Item {
-        uint256 id;
-        string name;
-        string category;
-        string image;
-        uint256 cost;
-        uint256 rating;
-        uint256 stock;
+        uint256 _id;
+        string _name;
+        string _category;
+        string _image;
+        uint256 _cost;
+        uint256 _rating;
+        uint256 _stock;
     }
 
     struct Order {
@@ -20,21 +19,22 @@ contract Dappazon {
     }
 
     mapping(uint256 => Item) public items;
-    mapping(address => mapping(uint256 => Order)) public orders;
     mapping(address => uint256) public orderCount;
+    mapping(address => mapping(uint256 => Order)) public orders;
 
-    event Buy(address buyer, uint256 orderId, uint256 itemId);
-    event List(string name, uint256 cost, uint256 quantity);
+    constructor() {
+        owner = msg.sender;
+    }
 
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
     }
 
-    constructor() {
-        owner = msg.sender;
-    }
+    event List(string name, uint256 cost, uint256 quantity);
+    event Buy(address buyer, uint256 orderId, uint256 itemId);
 
+    //list products
     function list(
         uint256 _id,
         string memory _name,
@@ -44,7 +44,6 @@ contract Dappazon {
         uint256 _rating,
         uint256 _stock
     ) public onlyOwner {
-        // Create Item
         Item memory item = Item(
             _id,
             _name,
@@ -54,40 +53,26 @@ contract Dappazon {
             _rating,
             _stock
         );
-
-        // Add Item to mapping
         items[_id] = item;
-
-        // Emit event
         emit List(_name, _cost, _stock);
     }
 
     function buy(uint256 _id) public payable {
-        // Fetch item
         Item memory item = items[_id];
 
-        // Require enough ether to buy item
-        require(msg.value >= item.cost);
-
-        // Require item is in stock
-        require(item.stock > 0);
-
-        // Create order
+        require(msg.value == item._cost, "Not enough eth paid");
+        require(item._stock > 0, "Not in stock");
         Order memory order = Order(block.timestamp, item);
 
-        // Add order for user
-        orderCount[msg.sender]++; // <-- Order ID
+        orderCount[msg.sender]++;
         orders[msg.sender][orderCount[msg.sender]] = order;
 
-        // Subtract stock
-        items[_id].stock = item.stock - 1;
-
-        // Emit event
-        emit Buy(msg.sender, orderCount[msg.sender], item.id);
+        items[_id]._stock = item._stock - 1;
+        emit Buy(msg.sender, orderCount[msg.sender], item._id);
     }
 
     function withdraw() public onlyOwner {
-        (bool success, ) = owner.call{value: address(this).balance}("");
+        (bool success, )=owner.call{value:address(this).balance}("");
         require(success);
     }
 }
